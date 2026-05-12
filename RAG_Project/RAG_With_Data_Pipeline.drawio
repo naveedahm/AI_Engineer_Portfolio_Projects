@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="6ZyZUIm0FbZd6QMl9UXx">
+    <mxGraphModel dx="1023" dy="1664" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="EhojWZNJsjsYZTAhKflq-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="80" width="40" x="190" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-2" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" value="Enterprise Chat DB" vertex="1">
+          <mxGeometry height="80" width="100" x="675" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-3" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" value="Enterprise Document DB" vertex="1">
+          <mxGeometry height="80" width="90" x="680" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-4" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;entryX=-0.04;entryY=0.4;entryDx=0;entryDy=0;entryPerimeter=0;" target="EhojWZNJsjsYZTAhKflq-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="20" y="220" as="sourcePoint" />
+            <mxPoint x="70" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-5" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Customer Support Chat" vertex="1">
+          <mxGeometry height="30" width="80" x="70" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="90" width="40" x="370" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-8" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="580" y="420" as="sourcePoint" />
+            <mxPoint x="420" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Customer Support Representative&amp;nbsp;" vertex="1">
+          <mxGeometry height="30" width="180" x="400" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="How can a stream be processed to create chunks for ingestion into a vector database ?" vertex="1">
+          <mxGeometry height="30" width="180" x="630" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-11" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="During System Design Hours: I would work on this Design" vertex="1">
+          <mxGeometry height="30" width="190" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Chat Logger Service" vertex="1">
+          <mxGeometry height="60" width="155" x="365" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-13" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="530" y="250" as="sourcePoint" />
+            <mxPoint x="670" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Logs the chats to the database" vertex="1">
+          <mxGeometry height="30" width="80" x="560" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-15" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" value="Vector Database" vertex="1">
+          <mxGeometry height="80" width="100" x="260" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Ingestion Service" vertex="1">
+          <mxGeometry height="60" width="120" x="440" y="-80" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Periodically searches the Enterprise DB and chunks any newly added documents to the vector database" vertex="1">
+          <mxGeometry height="30" width="200" x="580" y="-110" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-18" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1" value="Stream Processing of Customer Support Chat" vertex="1">
+          <mxGeometry height="30" width="140" x="570" y="-65" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontStyle=1" value="Batch Processing of Enterprise Documents" vertex="1">
+          <mxGeometry height="30" width="210" x="560" y="-150" as="geometry" />
+        </mxCell>
+        <mxCell id="EhojWZNJsjsYZTAhKflq-20" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Continuosly polls for new customer support chat messages, chunks them and adds them to Vector Database." vertex="1">
+          <mxGeometry height="30" width="240" x="570" y="-20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

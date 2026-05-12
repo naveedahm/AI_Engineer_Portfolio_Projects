@@ -1,0 +1,21 @@
+# Core Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# LangChain - Use the modular packages (recommended)
+langchain==0.3.19
+langchain-core==0.3.40
+langchain-openai==0.3.6
+langchain-pinecone==0.2.2
+langchain-text-splitters==0.3.5  # IMPORTANT: Add this!
+langchain-community==0.3.19
+
+# Pinecone
+pinecone-client==6.0.0
+
+# OpenAI
+openai==1.71.0
+
+# Utilities
+python-dotenv==1.0.1
+pydantic==2.10.6

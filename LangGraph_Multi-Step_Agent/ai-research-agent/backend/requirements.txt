@@ -1,0 +1,35 @@
+# Core dependencies - Using pre-built wheels for Windows
+langchain==0.1.0
+langgraph==0.0.20
+langchain-openai==0.0.2
+langchain-community==0.0.10
+
+# Web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Data validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Async support
+httpx==0.25.1
+aiofiles==23.2.1
+
+# Search tools
+duckduckgo-search==4.1.1
+beautifulsoup4==4.12.2
+aiohttp==3.9.1
+
+# Database (optional - for production)
+# sqlalchemy==2.0.23
+# alembic==1.13.0
+
+# Utilities
+python-dotenv==1.0.0
+tenacity==8.2.3
+loguru==0.7.2
+
+# Note: numpy is a dependency of langchain, but we'll let pip handle it
+# The key is to have Visual C++ build tools installed

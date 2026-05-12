@@ -1,0 +1,26 @@
+[
+  {
+    "id": "msg_001",
+    "timestamp": "2025-01-15T10:32:00Z",
+    "customer_id": "C12345",
+    "message": "How do I reset my password?",
+    "agent_response": "Go to settings → security → reset password. You'll receive an email with confirmation link.",
+    "pii": {"email": "user@example.com"}
+  },
+  {
+    "id": "msg_002",
+    "timestamp": "2025-01-16T14:20:00Z",
+    "customer_id": "C12346",
+    "message": "My payment was declined but I have sufficient funds",
+    "agent_response": "Check your card limit or try a different payment method. Contact your bank if issue persists.",
+    "pii": {"phone": "555-1234"}
+  },
+  {
+    "id": "msg_003",
+    "timestamp": "2025-01-17T09:15:00Z",
+    "customer_id": "C12347",
+    "message": "Can I upgrade my plan?",
+    "agent_response": "Yes, go to Account → Billing → Upgrade. Your new plan activates immediately.",
+    "pii": {}
+  }
+]

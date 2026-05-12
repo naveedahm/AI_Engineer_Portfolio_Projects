@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Agent - Multi-Step Reasoning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .chat-container {
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-radius: 15px 15px 5px 15px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            border-radius: 15px 15px 15px 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .message-timestamp {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 5px;
+            padding: 0 5px;
+        }
+
+        .system-message {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .thinking-indicator {
+            padding: 10px 20px;
+            background: white;
+            border-radius: 20px;
+            margin: 10px 20px;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+
+        .status-text {
+            margin-left: 10px;
+            color: #667eea;
+            font-size: 0.9rem;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        textarea {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            padding: 10px 20px 20px 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .secondary-button, .danger-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .secondary-button {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .secondary-button:hover {
+            background: #e0e0e0;
+        }
+
+        .danger-button {
+            background: #dc3545;
+            color: white;
+        }
+
+        .danger-button:hover {
+            background: #c82333;
+        }
+
+        .connection-status {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .status-connected {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-checking {
+            background: #ffc107;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .container {
+                border-radius: 10px;
+            }
+            
+            .send-button {
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Research Agent</h1>
+            <p>Multi-step reasoning with web search capabilities</p>
+            <div id="connectionStatus" class="connection-status status-checking">Checking connection...</div>
+        </header>
+        
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="welcome-message">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            👋 Hello! I'm an AI research agent. I can search the web and reason through complex questions.<br/><br/>
+                            Try asking me something like:<br/>
+                            • "What are the latest developments in quantum computing?"<br/>
+                            • "Explain the current state of fusion energy research"<br/>
+                            • "What are the top AI breakthroughs in 2024?"
+                        </div>
+                        <div class="message-timestamp">Just now</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="thinking-indicator" id="thinking" style="display: none;">
+                <div class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span class="status-text">Researching and analyzing...</span>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <textarea id="userInput" placeholder="Ask a question that requires research..." rows="3"></textarea>
+                <button id="sendButton" class="send-button">Send</button>
+            </div>
+            
+            <div class="controls">
+                <button id="clearButton" class="secondary-button">Clear Conversation</button>
+                <button id="stopButton" class="danger-button" style="display: none;">Stop Generation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ResearchAgentUI {
+            constructor() {
+                this.messageContainer = document.getElementById('messages');
+                this.userInput = document.getElementById('userInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.clearButton = document.getElementById('clearButton');
+                this.stopButton = document.getElementById('stopButton');
+                this.thinkingIndicator = document.getElementById('thinking');
+                this.connectionStatus = document.getElementById('connectionStatus');
+                
+                this.threadId = this.generateThreadId();
+                this.isGenerating = false;
+                this.currentAbortController = null;
+                this.backendUrl = 'http://localhost:8000';
+                
+                this.setupEventListeners();
+                this.checkBackendConnection();
+            }
+            
+            generateThreadId() {
+                let id = localStorage.getItem('thread_id');
+                if (!id) {
+                    id = 'thread_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('thread_id', id);
+                }
+                return id;
+            }
+            
+            setupEventListeners() {
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.clearButton.addEventListener('click', () => this.clearConversation());
+                this.stopButton.addEventListener('click', () => this.stopGeneration());
+                this.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+            }
+            
+            async checkBackendConnection() {
+                this.updateConnectionStatus('checking', 'Checking connection...');
+                
+                try {
+                    const response = await fetch(`${this.backendUrl}/health`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    
+                    if (response.ok) {
+                        this.updateConnectionStatus('connected', 'Backend connected');
+                        console.log('Backend is reachable');
+                    } else {
+                        throw new Error('Backend not responding');
+                    }
+                } catch (error) {
+                    console.warn('Backend connection failed:', error);
+                    this.updateConnectionStatus('disconnected', 'Backend offline - Using demo mode');
+                    this.addSystemMessage('⚠️ Backend server is not running. Starting in demo mode. To enable AI features, start the backend with: python run.py');
+                }
+            }
+            
+            updateConnectionStatus(status, message) {
+                this.connectionStatus.textContent = message;
+                this.connectionStatus.className = `connection-status status-${status}`;
+            }
+            
+            async sendMessage() {
+                const message = this.userInput.value.trim();
+                if (!message || this.isGenerating) return;
+                
+                // Clear input
+                this.userInput.value = '';
+                
+                // Add user message to UI
+                this.addMessage(message, 'user');
+                
+                // Start generation
+                this.startGeneration();
+                
+                // Create assistant message placeholder
+                const assistantMessage = this.addMessage('', 'assistant', true);
+                
+                try {
+                    // Check if backend is available
+                    const isBackendAvailable = this.connectionStatus.classList.contains('status-connected');
+                    
+                    if (isBackendAvailable) {
+                        await this.streamFromBackend(message, assistantMessage);
+                    } else {
+                        await this.simulateResponse(message, assistantMessage);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.addSystemMessage(`Error: ${error.message}. Using demo response instead.`);
+                    await this.simulateResponse(message, assistantMessage);
+                } finally {
+                    this.endGeneration();
+                }
+            }
+            
+            async streamFromBackend(message, messageElement) {
+                this.currentAbortController = new AbortController();
+                
+                try {
+                    const response = await fetch(`${this.backendUrl}/api/chat/stream`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            thread_id: this.threadId
+                        }),
+                        signal: this.currentAbortController.signal
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let accumulatedText = '';
+                    
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    
+                                    switch (data.type) {
+                                        case 'token':
+                                            accumulatedText += data.content;
+                                            this.updateAssistantMessage(messageElement, accumulatedText);
+                                            break;
+                                            
+                                        case 'tool_start':
+                                            this.addSystemMessage(`🔧 Using tool: ${data.tool}...`);
+                                            break;
+                                            
+                                        case 'tool_end':
+                                            this.addSystemMessage(`✅ Tool completed: ${data.tool}`);
+                                            break;
+                                            
+                                        case 'final':
+                                            this.updateAssistantMessage(messageElement, data.content, true);
+                                            break;
+                                            
+                                        case 'error':
+                                            this.addSystemMessage(`❌ Error: ${data.error}`);
+                                            break;
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to parse SSE data:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        this.addSystemMessage('Generation stopped by user.');
+                    } else {
+                        throw error;
+                    }
+                } finally {
+                    this.currentAbortController = null;
+                }
+            }
+            
+            async simulateResponse(message, messageElement) {
+                // Simulate thinking/research process
+                this.addSystemMessage('🔍 Researching your question...');
+                await this.sleep(1000);
+                
+                this.addSystemMessage('📚 Gathering information from web sources...');
+                await this.sleep(1500);
+                
+                this.addSystemMessage('🤔 Analyzing and synthesizing results...');
+                await this.sleep(1000);
+                
+                // Generate demo response based on the question
+                let demoResponse = this.generateDemoResponse(message);
+                
+                // Simulate streaming
+                let currentText = '';
+                for (let i = 0; i < demoResponse.length; i++) {
+                    currentText += demoResponse[i];
+                    this.updateAssistantMessage(messageElement, currentText);
+                    await this.sleep(Math.random() * 30 + 10); // Random delay between 10-40ms
+                }
+                
+                this.updateAssistantMessage(messageElement, demoResponse, true);
+                this.addSystemMessage('💡 Tip: Start the backend server for full AI-powered responses!');
+            }
+            
+            generateDemoResponse(question) {
+                const responses = {
+                    default: `This is a demo response because the backend server isn't running.
+
+To get real AI-powered responses:
+
+1. **Start the backend server:**
+   \`\`\`bash
+   cd backend
+   python run.py
+   \`\`\`
+
+2. **Make sure you have your OpenAI API key** in the \`.env\` file
+
+3. **Refresh this page** and the connection status should turn green
+
+The backend provides:
+- 🤖 GPT-powered responses
+- 🔍 Real web search capabilities  
+- 🔄 Multi-step research reasoning
+- 💾 Conversation memory
+
+Once connected, try asking me a complex question that requires research!`,
+                    
+                    quantum: "Based on my research, quantum computing has seen several major breakthroughs in 2024:\n\n1. **Error Correction Milestone**: Google's quantum lab achieved a major breakthrough in quantum error correction, reducing error rates by 99%.\n\n2. **New Qubit Designs**: Researchers at MIT developed a new type of superconducting qubit that maintains coherence 10x longer.\n\n3. **Commercial Applications**: IBM and Amazon both launched cloud-based quantum computing services accessible to businesses.\n\n4. **Algorithm Advances**: New quantum algorithms for drug discovery and materials science were demonstrated.\n\nWould you like me to dive deeper into any of these areas?",
+                    
+                    ai: "Recent AI breakthroughs in 2024 include:\n\n1. **Multimodal Models**: GPT-4 and Gemini have advanced significantly in understanding images, video, and audio simultaneously.\n\n2. **Efficient Architectures**: New model architectures like Mixture of Experts (MoE) are making LLMs more efficient to run.\n\n3. **Long Context Windows**: Models can now process millions of tokens (like entire book series) at once.\n\n4. **Agent Frameworks**: Systems like AutoGPT and LangGraph enable AI to perform multi-step tasks autonomously.\n\n5. **Open Source Progress**: Models like Llama 3 and Mistral are closing the gap with proprietary systems.\n\nIs there a specific area you'd like to explore further?"
+                };
+                
+                const lowerQuestion = question.toLowerCase();
+                if (lowerQuestion.includes('quantum')) {
+                    return responses.quantum;
+                } else if (lowerQuestion.includes('ai') || lowerQuestion.includes('artificial intelligence')) {
+                    return responses.ai;
+                } else {
+                    return responses.default;
+                }
+            }
+            
+            addMessage(content, role, isPlaceholder = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+                
+                if (isPlaceholder) {
+                    messageDiv.classList.add('streaming');
+                }
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = this.formatMessage(content);
+                
+                const timestamp = document.createElement('div');
+                timestamp.className = 'message-timestamp';
+                timestamp.textContent = new Date().toLocaleTimeString();
+                
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(timestamp);
+                
+                this.messageContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+                
+                return messageDiv;
+            }
+            
+            updateAssistantMessage(messageElement, content, isFinal = false) {
+                const contentDiv = messageElement.querySelector('.message-content');
+                if (contentDiv) {
+                    contentDiv.innerHTML = this.formatMessage(content);
+                }
+                
+                if (isFinal) {
+                    messageElement.classList.remove('streaming');
+                }
+                
+                this.scrollToBottom();
+            }
+            
+            addSystemMessage(content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'system-message';
+                messageDiv.innerHTML = content;
+                this.messageContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+            
+            formatMessage(content) {
+                if (!content) return '';
+                
+                // Convert markdown-style code blocks
+                content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    return `<pre><code>${this.escapeHtml(code)}</code></pre>`;
+                });
+                
+                // Convert inline code
+                content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+                
+                // Convert line breaks
+                content = content.replace(/\n/g, '<br/>');
+                
+                // Convert markdown bold
+                content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                
+                // Convert markdown lists
+                content = content.replace(/^\d+\.\s(.+)$/gm, '<li>$1</li>');
+                content = content.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+                
+                return content;
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            startGeneration() {
+                this.isGenerating = true;
+                this.sendButton.disabled = true;
+                this.stopButton.style.display = 'block';
+                this.thinkingIndicator.style.display = 'block';
+            }
+            
+            endGeneration() {
+                this.isGenerating = false;
+                this.sendButton.disabled = false;
+                this.stopButton.style.display = 'none';
+                this.thinkingIndicator.style.display = 'none';
+            }
+            
+            stopGeneration() {
+                if (this.currentAbortController) {
+                    this.currentAbortController.abort();
+                    this.currentAbortController = null;
+                }
+                this.endGeneration();
+            }
+            
+            clearConversation() {
+                if (confirm('Clear the conversation history?')) {
+                    // Clear UI messages
+                    const messages = this.messageContainer.querySelectorAll('.message, .system-message');
+                    messages.forEach(msg => msg.remove());
+                    
+                    // Add welcome message back
+                    const welcomeDiv = document.createElement('div');
+                    welcomeDiv.className = 'welcome-message';
+                    welcomeDiv.innerHTML = `
+                        <div class="message assistant">
+                            <div class="message-content">
+                                👋 Conversation cleared! Ask me something that requires research.
+                            </div>
+                            <div class="message-timestamp">Just now</div>
+                        </div>
+                    `;
+                    this.messageContainer.appendChild(welcomeDiv);
+                    
+                    // Generate new thread ID
+                    this.threadId = this.generateThreadId();
+                }
+            }
+            
+            scrollToBottom() {
+                this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
+            }
+            
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+        
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.app = new ResearchAgentUI();
+        });
+    </script>
+</body>
+</html>
