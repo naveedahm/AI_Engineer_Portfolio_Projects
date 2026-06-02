@@ -1,0 +1,36 @@
+{
+  "dashboard": {
+    "title": "LLM Gateway Monitor",
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "targets": [{
+          "expr": "rate(llm_requests_total[1m])",
+          "legendFormat": "{{provider}} - {{status}}"
+        }]
+      },
+      {
+        "title": "Request Latency",
+        "targets": [{
+          "expr": "histogram_quantile(0.95, rate(llm_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95 - {{provider}}"
+        }]
+      },
+      {
+        "title": "Cost (USD)",
+        "targets": [{
+          "expr": "increase(llm_cost_dollars_total[1h])",
+          "legendFormat": "{{provider}}"
+        }]
+      },
+      {
+        "title": "Memory Usage",
+        "targets": [{
+          "expr": "process_memory_usage_bytes",
+          "legendFormat": "Gateway Memory"
+        }]
+      }
+    ]
+  }
+}

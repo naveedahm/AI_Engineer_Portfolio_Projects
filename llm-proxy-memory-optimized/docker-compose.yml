@@ -1,0 +1,81 @@
+# docker-compose.yml - Lightweight monitoring stack
+version: '3.8'
+
+services:
+  # Lightweight Prometheus (memory-optimized)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=24h'  # Only keep 24h of data
+      - '--storage.tsdb.retention.size=1GB'   # Limit to 1GB
+      - '--storage.tsdb.wal-compression'      # Compress WAL
+      - '--web.enable-lifecycle'
+    mem_limit: 512m  # Limit to 512MB RAM
+    mem_reservation: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    networks:
+      - monitoring-net
+
+  # Lightweight Grafana (memory-optimized)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+      - GF_SERVER_ROUTER_LOGGING=false
+      - GF_LOG_LEVEL=error
+      - GF_LOG_MODE=console
+      - GF_METRICS_ENABLED=false
+      - GF_ALERTING_ENABLED=false
+      - GF_SNAPSHOTS_ENABLED=false
+      - GF_RENDERING_SERVER_ENABLED=false
+      - GF_EXPLORE_ENABLED=false  # Disable heavy features
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=30s
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    mem_limit: 256m  # Limit to 256MB RAM
+    mem_reservation: 128m
+    cpus: 0.3
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring-net
+
+  # Optional: Node exporter for system metrics (lightweight)
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    mem_limit: 64m
+    cpus: 0.1
+    restart: unless-stopped
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
