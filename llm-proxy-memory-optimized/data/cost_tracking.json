@@ -1,0 +1,160 @@
+{
+  "by_provider": {
+    "groq": 0.00027360000000000004,
+    "openai": 4.4e-05
+  },
+  "by_model": {
+    "groq/llama-3.3-70b-versatile": 0.00027360000000000004,
+    "openai/gpt-3.5-turbo": 4.4e-05
+  },
+  "request_counts": {
+    "groq/llama-3.3-70b-versatile": 9,
+    "openai/gpt-3.5-turbo": 2
+  },
+  "cost_history": [
+    {
+      "timestamp": "2026-06-03T15:17:46.501143",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:17:47.585215",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:17:48.860411",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:17:49.747624",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:18:06.653024",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:18:07.873952",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:18:09.275389",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:18:31.610376",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:29:13.673771",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "cost": 3.04e-05,
+      "tokens_prompt": 40,
+      "tokens_completion": 3,
+      "total_tokens": 43,
+      "metadata": {
+        "model_family": "premium",
+        "attempt": 1
+      }
+    },
+    {
+      "timestamp": "2026-06-03T15:29:29.679299",
+      "provider": "openai",
+      "model": "gpt-3.5-turbo",
+      "cost": 2.2e-05,
+      "tokens_prompt": 12,
+      "tokens_completion": 2,
+      "total_tokens": 14,
+      "metadata": {
+        "model_family": "direct",
+        "request_type": "direct_provider"
+      }
+    },
+    {
+      "timestamp": "2026-06-03T16:02:06.193480",
+      "provider": "openai",
+      "model": "gpt-3.5-turbo",
+      "cost": 2.2e-05,
+      "tokens_prompt": 12,
+      "tokens_completion": 2,
+      "total_tokens": 14,
+      "metadata": {
+        "model_family": "direct",
+        "request_type": "direct_provider"
+      }
+    }
+  ],
+  "last_updated": "2026-06-03T16:02:06.193791"
+}
