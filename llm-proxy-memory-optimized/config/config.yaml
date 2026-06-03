@@ -1,4 +1,4 @@
-# config/config.yaml - Working configuration
+# config/config.yaml
 server:
   host: "0.0.0.0"
   port: 8000
@@ -15,12 +15,38 @@ models:
     fallbacks:
       - provider: openai
         model: gpt-3.5-turbo
+  
+  premium:
+    primary:
+      provider: groq
+      model: llama-3.3-70b-versatile
+    fallbacks:
+      - provider: openai
+        model: gpt-4o-mini
+      - provider: groq
+        model: mixtral-8x7b-32768
+      - provider: openai
+        model: gpt-3.5-turbo
+  
+  balanced:
+    primary:
+      provider: groq
+      model: mixtral-8x7b-32768
+    fallbacks:
+      - provider: openai
+        model: gpt-4o-mini
+      - provider: groq
+        model: llama-3.1-8b-instant
 
 providers:
   groq:
-    enabled: true
     timeout: 30
+    # enabled field removed - handled by router logic
   
   openai:
-    enabled: true
     timeout: 30
+    # enabled field removed
+  
+  together:
+    timeout: 30
+    enabled: false  # Keep this one as it's disabled

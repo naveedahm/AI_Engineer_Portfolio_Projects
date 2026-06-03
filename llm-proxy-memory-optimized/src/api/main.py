@@ -1,27 +1,25 @@
 # src/api/main.py - Complete working version
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter, Histogram, Gauge
 import time
 import os
 import yaml
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any
+from src.cost.cost_tracker import cost_tracker
+from fastapi import WebSocket
 
 # Fix path for imports
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.gateway.router import LLMRouter
-from src.api.models import ChatCompletionRequest, Message
+from src.api.models import ChatCompletionRequest
 
-# Initialize Prometheus metrics
-REQUEST_COUNT = Counter('llm_requests_total', 'Total requests', ['provider', 'model', 'status'])
-REQUEST_LATENCY = Histogram('llm_request_duration_seconds', 'Request latency', ['provider', 'model'])
-COST_TOTAL = Counter('llm_cost_dollars_total', 'Total cost in USD', ['provider', 'model'])
-ACTIVE_REQUESTS = Gauge('llm_active_requests', 'Active requests')
-PROVIDER_ERRORS = Counter('llm_provider_errors_total', 'Provider errors', ['provider', 'error_type'])
+# Simple metrics (without prometheus for now to avoid issues)
+REQUEST_COUNT = {}
+REQUEST_LATENCY = {}
+ACTIVE_REQUESTS = 0
 
 # Load configuration
 def load_config():
@@ -32,53 +30,45 @@ def load_config():
     return {
         "server": {"host": "0.0.0.0", "port": 8000},
         "budget": {"daily_limit": 5.0, "hourly_limit": 1.0},
+        "providers": {
+            "groq": {"timeout": 30},
+            "openai": {"timeout": 30}
+        },
         "models": {
             "default": {
                 "primary": {"provider": "groq", "model": "llama-3.1-8b-instant"},
                 "fallbacks": [{"provider": "openai", "model": "gpt-3.5-turbo"}]
+            },
+            "premium": {
+                "primary": {"provider": "groq", "model": "llama-3.3-70b-versatile"},
+                "fallbacks": [
+                    {"provider": "openai", "model": "gpt-4o-mini"},
+                    {"provider": "groq", "model": "mixtral-8x7b-32768"}
+                ]
             }
-        },
-        "providers": {
-            "groq": {"enabled": True, "timeout": 30},
-            "openai": {"enabled": True, "timeout": 30}
         }
     }
 
 config = load_config()
 
 # Initialize router
-print("\n" + "="*50)
-print("Initializing LLM Router...")
-print("="*50)
 router = LLMRouter(config)
-print("="*50 + "\n")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    print("\n" + "="*50)
-    print("LLM Gateway Starting...")
-    print("="*50)
-    print(f"API Server: http://{config['server']['host']}:{config['server']['port']}")
-    print(f"Health Check: http://localhost:{config['server']['port']}/health")
-    print(f"Metrics: http://localhost:{config['server']['port']}/metrics")
-    print("="*50 + "\n")
-    
+    print("\n" + "=" * 50)
+    print("LLM Gateway Ready!")
+    print("=" * 50)
+    print(f"API: http://localhost:8000")
+    print(f"Health: http://localhost:8000/health")
+    print(f"Chains: http://localhost:8000/chains")
+    print("=" * 50 + "\n")
     yield
-    
-    print("\nShutting down LLM Gateway...")
-    await router.close()
-    print("Shutdown complete.\n")
+    print("Shutting down...")
 
-# Create FastAPI app
-app = FastAPI(
-    title="LLM Gateway",
-    description="Unified API Gateway for Multiple LLM Providers",
-    version="1.0.0",
-    lifespan=lifespan
-)
+app = FastAPI(title="LLM Gateway", lifespan=lifespan)
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -87,141 +77,124 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "service": "LLM Gateway",
-        "version": "1.0.0",
-        "status": "running",
-        "providers": list(router.providers.keys()),
-        "chains": list(router.fallback_chains.keys()),
-        "endpoints": {
-            "chat": "/v1/chat/completions",
-            "health": "/health",
-            "metrics": "/metrics"
-        }
-    }
-
 @app.post("/v1/chat/completions")
-async def chat_completion(chat_request: ChatCompletionRequest):
+async def chat_completion(request: Request, chat_request: ChatCompletionRequest):
     """Chat completion endpoint"""
-    ACTIVE_REQUESTS.inc()
+    global ACTIVE_REQUESTS
+    ACTIVE_REQUESTS += 1
     start_time = time.time()
     
     try:
         # Convert messages to dict format
         messages = [{"role": msg.role, "content": msg.content} for msg in chat_request.messages]
-
+        
         # Route the request
-        print("before sending call to router")
         result = await router.route(
             messages=messages,
             model_family=chat_request.model_family or "default",
+            provider=getattr(chat_request, 'provider', None),
+            model=getattr(chat_request, 'model', None),
             temperature=chat_request.temperature,
             max_tokens=chat_request.max_tokens,
         )
-        print("after sending call to router")
-
-
-        latency_ms = (time.time() - start_time) * 1000
         
-        if "error" not in result:
-            # Record success metrics
-            REQUEST_COUNT.labels(
-                provider=result.get('provider', 'unknown'),
-                model=result.get('model', 'unknown'),
-                status='success'
-            ).inc()
-            
-            REQUEST_LATENCY.labels(
-                provider=result.get('provider', 'unknown'),
-                model=result.get('model', 'unknown')
-            ).observe(latency_ms / 1000)
-            
-            if result.get('cost'):
-                COST_TOTAL.labels(
-                    provider=result.get('provider', 'unknown'),
-                    model=result.get('model', 'unknown')
-                ).inc(result['cost'])
-            
-            return result
-        else:
-            # Record error metrics
-            REQUEST_COUNT.labels(
-                provider='unknown',
-                model='unknown',
-                status='error'
-            ).inc()
-            
-            PROVIDER_ERRORS.labels(
-                provider='all',
-                error_type='routing_failure'
-            ).inc()
-            
-            raise HTTPException(status_code=503, detail=result.get('error'))
-            
-    except HTTPException:
-        raise
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result.get('error'))
+        
+        # Add latency to result
+        result['total_latency_ms'] = (time.time() - start_time) * 1000
+        
+        return result
+        
     except Exception as e:
-        # Record error metrics
-        REQUEST_COUNT.labels(
-            provider='unknown',
-            model='unknown',
-            status='error'
-        ).inc()
-        
-        PROVIDER_ERRORS.labels(
-            provider='gateway',
-            error_type=type(e).__name__
-        ).inc()
-        
         raise HTTPException(status_code=500, detail=str(e))
-    
     finally:
-        ACTIVE_REQUESTS.dec()
-
-@app.get("/metrics")
-async def metrics_endpoint():
-    """Prometheus metrics endpoint"""
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+        ACTIVE_REQUESTS -= 1
 
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    provider_status = {}
-    for name, provider in router.providers.items():
-        provider_status[name] = "available"
-    
     return {
-        "status": "healthy" if router.providers else "degraded",
+        "status": "healthy", 
         "timestamp": time.time(),
-        "providers": provider_status,
-        "active_requests": ACTIVE_REQUESTS._value.get(),
-        "chains_available": len(router.fallback_chains)
+        "active_requests": ACTIVE_REQUESTS,
+        "chains": list(router.fallback_chains.keys())
     }
 
-@app.get("/providers")
-async def list_providers():
-    """List available providers"""
+@app.get("/chains")
+async def list_chains():
+    """List available model chains"""
     return {
-        "initialized_providers": list(router.providers.keys()),
-        "fallback_chains": {
-            name: [p['provider'] for p in chain] 
-            for name, chain in router.fallback_chains.items()
-        },
-        "circuit_breakers": list(router.circuit_breakers.keys())
+        "available_chains": list(router.fallback_chains.keys()),
+        "chains": router.fallback_chains
     }
+
+# Add this to src/api/main.py
+
+@app.get("/budget")
+async def get_budget_status():
+    """Get current budget usage"""
+    remaining = router.budget_tracker.get_remaining_budget()
+    return {
+        "daily": {
+            "used": remaining.get('daily_used', 0),
+            "limit": router.budget_tracker.daily_limit,
+            "remaining": remaining.get('daily_remaining', 0),
+            "percentage": (remaining.get('daily_used', 0) / router.budget_tracker.daily_limit) * 100
+        },
+        "hourly": {
+            "used": remaining.get('hourly_used', 0),
+            "limit": router.budget_tracker.hourly_limit,
+            "remaining": remaining.get('hourly_remaining', 0),
+            "percentage": (remaining.get('hourly_used', 0) / router.budget_tracker.hourly_limit) * 100
+        }
+    }
+
+@app.get("/costs/breakdown")
+async def get_cost_breakdown(period: str = "all", limit: int = 100):
+    """Get detailed cost breakdown by provider and model"""
+    breakdown = cost_tracker.get_breakdown(period=period, limit=limit)
+    return breakdown
+
+@app.get("/costs/models")
+async def get_model_costs():
+    """Get detailed costs by individual model"""
+    model_costs = cost_tracker.get_model_costs()
+    return {
+        "models": model_costs,
+        "total_models": len(model_costs),
+        "total_cost": sum(m["total_cost"] for m in model_costs.values())
+    }
+
+@app.get("/costs/reset")
+async def reset_costs(confirm: bool = False):
+    """Reset cost tracking (use with caution)"""
+    return cost_tracker.reset_costs(confirm=confirm)
+
+@app.websocket("/ws/costs")
+async def websocket_costs(websocket: WebSocket):
+    """WebSocket endpoint for real-time cost updates"""
+    await websocket.accept()
+    
+    try:
+        last_update = datetime.now()
+        while True:
+            # Send cost updates every 5 seconds
+            if (datetime.now() - last_update).seconds >= 5:
+                breakdown = cost_tracker.get_breakdown(period="today")
+                await websocket.send_json(breakdown)
+                last_update = datetime.now()
+            
+            await asyncio.sleep(1)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "src.api.main:app",
-        host=config['server']['host'],
-        port=config['server']['port'],
+        "src.api.main:app", 
+        host="0.0.0.0", 
+        port=8000,
         reload=False,
-        log_level="info"
+        workers=1
     )
