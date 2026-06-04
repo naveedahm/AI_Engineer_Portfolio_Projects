@@ -8,6 +8,12 @@ import aiohttp
 import json
 import os
 import time
+os.environ['CURL_CA_BUNDLE'] = ''
+from dotenv import load_dotenv
+
+
+# Load variables from the .env file
+load_dotenv()
 
 @dataclass
 class LLMResponse:
@@ -219,6 +225,257 @@ class TogetherClient(BaseProvider):
             timestamp=datetime.utcnow(),
             metadata={}
         )
+    
+    async def close(self):
+        if self._session:
+            await self._session.close()
+
+class OllamaClient(BaseProvider):
+    """Ollama Local Client - Free, private LLM inference"""
+    
+    def __init__(self, base_url: str = "http://localhost:11434", timeout: int = 120, **kwargs):
+        self.base_url = base_url
+        self.timeout = timeout
+        self._session = None
+        self.enabled = True
+        print(f"✅ Ollama client initialized (url={base_url}, timeout={timeout}s)")
+    
+    async def _get_session(self):
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
+    
+    async def chat_completion(self, messages: List[Dict], model: str, **kwargs) -> LLMResponse:
+        start_time = time.time()
+        session = await self._get_session()
+        
+        # Check if Ollama is running
+        try:
+            async with session.get(f"{self.base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                if resp.status != 200:
+                    raise Exception("Ollama service not running")
+        except Exception as e:
+            raise Exception(f"Cannot connect to Ollama at {self.base_url}. Is Ollama running? Error: {e}")
+        
+        # Convert messages to Ollama format
+        # Ollama expects 'prompt' for non-chat models, but supports chat format
+        last_message = messages[-1]["content"]
+        
+        # Build context from previous messages
+        context = ""
+        if len(messages) > 1:
+            context = "\n".join([f"{m['role']}: {m['content']}" for m in messages[:-1]])
+        
+        payload = {
+            "model": model,
+            "prompt": last_message,
+            "system": context if context else "",
+            "temperature": kwargs.get("temperature", 0.7),
+            "top_p": kwargs.get("top_p", 0.9),
+            "stream": False,
+            "options": {
+                "num_predict": kwargs.get("max_tokens", 1000),
+                "stop": kwargs.get("stop", [])
+            }
+        }
+        
+        async with session.post(
+            f"{self.base_url}/api/generate",
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=self.timeout)
+        ) as resp:
+            if resp.status != 200:
+                error_data = await resp.text()
+                raise Exception(f"Ollama error {resp.status}: {error_data}")
+            data = await resp.json()
+        
+        latency = (time.time() - start_time) * 1000
+        
+        # Ollama provides token counts
+        prompt_tokens = data.get("prompt_eval_count", 0)
+        completion_tokens = data.get("eval_count", 0)
+        
+        return LLMResponse(
+            text=data.get("response", ""),
+            provider="ollama",
+            model=model,
+            latency_ms=latency,
+            cost=0.0,  # Free! Local inference
+            tokens_prompt=prompt_tokens,
+            tokens_completion=completion_tokens,
+            timestamp=datetime.utcnow(),
+            metadata={
+                "total_duration": data.get("total_duration", 0),
+                "load_duration": data.get("load_duration", 0),
+                "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+                "eval_duration": data.get("eval_duration", 0)
+            }
+        )
+    
+    async def stream_completion(self, messages: List[Dict], model: str, **kwargs) -> AsyncIterator[str]:
+        """Streaming completion for Ollama"""
+        session = await self._get_session()
+        
+        last_message = messages[-1]["content"]
+        context = "\n".join([f"{m['role']}: {m['content']}" for m in messages[:-1]]) if len(messages) > 1 else ""
+        
+        payload = {
+            "model": model,
+            "prompt": last_message,
+            "system": context,
+            "temperature": kwargs.get("temperature", 0.7),
+            "stream": True
+        }
+        
+        async with session.post(
+            f"{self.base_url}/api/generate",
+            json=payload
+        ) as resp:
+            async for line in resp.content:
+                if line:
+                    try:
+                        data = json.loads(line.decode('utf-8'))
+                        if data.get("response"):
+                            yield data["response"]
+                        if data.get("done"):
+                            break
+                    except json.JSONDecodeError:
+                        continue
+    
+    async def close(self):
+        if self._session:
+            await self._session.close()
+
+# src/gateway/providers.py - Add HuggingFaceClient
+
+# src/gateway/providers.py - Updated HuggingFaceClient using huggingface_hub
+
+class HuggingFaceClient(BaseProvider):
+    """Hugging Face Client using official huggingface_hub library"""
+    
+    def __init__(self, api_key: str = None, timeout: int = 90, **kwargs):
+        self.api_key = api_key or os.getenv('HUGGINGFACE_TOKEN')
+        self.timeout = timeout
+        
+        # Initialize the official InferenceClient
+        try:
+            from huggingface_hub import InferenceClient
+            if self.api_key:
+                self.client = InferenceClient(token=self.api_key, timeout=timeout)
+                print(f"✅ Hugging Face client initialized with API key (timeout={timeout}s)")
+            else:
+                # No API key - use free tier with rate limits
+                self.client = InferenceClient(timeout=timeout)
+                print(f"⚠️  Hugging Face client initialized without API key (rate-limited)")
+        except ImportError:
+            raise ImportError("huggingface_hub not installed. Run: pip install huggingface_hub")
+        
+        self._session = None
+    
+    async def chat_completion(self, messages: List[Dict], model: str, **kwargs) -> LLMResponse:
+        """Chat completion using huggingface_hub InferenceClient"""
+        start_time = time.time()
+        
+        # Convert messages to the format expected by huggingface_hub
+        prompt = self._format_messages(messages)
+        
+        try:
+            # Run the inference (this is synchronous, so we need to run it in a thread pool)
+            import asyncio
+            loop = asyncio.get_event_loop()
+            
+            # Prepare parameters
+            params = {
+                "temperature": kwargs.get("temperature", 0.7),
+                "max_new_tokens": kwargs.get("max_tokens", 1000),
+                "top_p": kwargs.get("top_p", 0.95),
+                "do_sample": True,
+                "return_full_text": False
+            }
+            
+            # Make the API call
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.client.text_generation(
+                    prompt,
+                    model=model,
+                    **params
+                )
+            )
+            
+            latency = (time.time() - start_time) * 1000
+            
+            # Estimate tokens (simplified)
+            prompt_tokens = len(prompt.split())
+            completion_tokens = len(result.split())
+            
+            return LLMResponse(
+                text=result.strip(),
+                provider="huggingface",
+                model=model,
+                latency_ms=latency,
+                cost=0.0,  # Free tier
+                tokens_prompt=prompt_tokens,
+                tokens_completion=completion_tokens,
+                timestamp=datetime.utcnow(),
+                metadata={"api_type": "huggingface_hub", "auth": self.api_key is not None}
+            )
+            
+        except Exception as e:
+            raise Exception(f"Hugging Face inference failed: {e}")
+    
+    async def stream_completion(self, messages: List[Dict], model: str, **kwargs) -> AsyncIterator[str]:
+        """Streaming completion using huggingface_hub"""
+        prompt = self._format_messages(messages)
+        
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            
+            # Prepare parameters
+            params = {
+                "temperature": kwargs.get("temperature", 0.7),
+                "max_new_tokens": kwargs.get("max_tokens", 1000),
+                "top_p": kwargs.get("top_p", 0.95),
+                "do_sample": True
+            }
+            
+            # Use streaming
+            stream = await loop.run_in_executor(
+                None,
+                lambda: self.client.text_generation(
+                    prompt,
+                    model=model,
+                    stream=True,
+                    **params
+                )
+            )
+            
+            # Yield tokens as they arrive
+            for token in stream:
+                if token:
+                    yield token
+                    
+        except Exception as e:
+            raise Exception(f"Hugging Face streaming failed: {e}")
+    
+    def _format_messages(self, messages: List[Dict]) -> str:
+        """Convert OpenAI-style messages to prompt format"""
+        formatted = []
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            
+            if role == "system":
+                formatted.append(f"System: {content}")
+            elif role == "user":
+                formatted.append(f"User: {content}")
+            elif role == "assistant":
+                formatted.append(f"Assistant: {content}")
+        
+        # Add assistant prefix for generation
+        formatted.append("Assistant:")
+        return "\n".join(formatted)
     
     async def close(self):
         if self._session:

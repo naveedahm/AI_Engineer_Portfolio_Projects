@@ -14,6 +14,7 @@ import os
 load_dotenv()
 
 class LLMRouter:
+
     def __init__(self, config: Dict[str, Any]):
         print("=" * 50)
         print("Initializing LLM Router...")
@@ -29,15 +30,22 @@ class LLMRouter:
         self._provider_configs = config.get('providers', {})
         self._provider_instances = {}
         
+        # DEBUG: Print all provider configs
+        print(f"📋 Provider configs found: {list(self._provider_configs.keys())}")
+        for name, cfg in self._provider_configs.items():
+            print(f"   - {name}: enabled={cfg.get('enabled', True)}")
+        
         # Setup fallback chains
         self._setup_fallback_chains(config)
         
-        # Initialize circuit breakers for providers
+        # Initialize circuit breakers
         self._init_circuit_breakers()
         
-        print(f"✅ Loaded chains: {list(self.fallback_chains.keys())}")
-        print(f"✅ Available providers: {list(self._provider_configs.keys())}")
+        # DEBUG: Print available chains
+        print(f"📋 Available chains: {list(self.fallback_chains.keys())}")
+        
         print("=" * 50)
+
     
     def _setup_fallback_chains(self, config: Dict[str, Any]):
         """Setup fallback chains from config"""
@@ -73,32 +81,45 @@ class LLMRouter:
                 recovery_timeout=30
             )
     
+    # src/gateway/router.py - Update the provider initialization
+
     async def _get_provider(self, provider_name: str):
         """Lazy load provider on first use"""
         if provider_name not in self._provider_instances:
             config = self._provider_configs.get(provider_name, {})
             
+            # Check if provider is enabled
             if config.get('enabled') is False:
+                print(f"  ⏭️  Provider {provider_name} is disabled")
                 return None
             
+            # Dynamically import provider classes
             try:
-                from src.gateway.providers import OpenAIClient, GroqClient
+                from src.gateway.providers import OpenAIClient, GroqClient, TogetherClient, OllamaClient, HuggingFaceClient
                 
                 provider_map = {
                     'openai': OpenAIClient,
                     'groq': GroqClient,
+                    'together': TogetherClient,
+                    'ollama': OllamaClient,  # Make sure this is here
+                    'huggingface': HuggingFaceClient,  # Add this line
                 }
                 
                 provider_class = provider_map.get(provider_name)
                 if not provider_class:
+                    print(f"  ❌ Unknown provider: {provider_name}")
                     return None
                 
+                # Extract parameters for the provider
                 valid_params = {}
                 if 'timeout' in config:
                     valid_params['timeout'] = config['timeout']
                 if 'api_key' in config and config['api_key']:
                     valid_params['api_key'] = config['api_key']
+                if 'base_url' in config:
+                    valid_params['base_url'] = config['base_url']
                 
+                # Initialize the provider
                 self._provider_instances[provider_name] = provider_class(**valid_params)
                 print(f"  ✅ Initialized {provider_name} provider")
                 

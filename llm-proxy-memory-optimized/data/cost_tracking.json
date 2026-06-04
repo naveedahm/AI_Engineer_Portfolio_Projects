@@ -1,15 +1,18 @@
 {
   "by_provider": {
     "groq": 0.00027360000000000004,
-    "openai": 4.4e-05
+    "openai": 4.4e-05,
+    "ollama": 0.0
   },
   "by_model": {
     "groq/llama-3.3-70b-versatile": 0.00027360000000000004,
-    "openai/gpt-3.5-turbo": 4.4e-05
+    "openai/gpt-3.5-turbo": 4.4e-05,
+    "ollama/llama3.2:3b": 0.0
   },
   "request_counts": {
     "groq/llama-3.3-70b-versatile": 9,
-    "openai/gpt-3.5-turbo": 2
+    "openai/gpt-3.5-turbo": 2,
+    "ollama/llama3.2:3b": 1
   },
   "cost_history": [
     {
@@ -154,7 +157,20 @@
         "model_family": "direct",
         "request_type": "direct_provider"
       }
+    },
+    {
+      "timestamp": "2026-06-03T17:23:09.111164",
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "cost": 0.0,
+      "tokens_prompt": 30,
+      "tokens_completion": 4,
+      "total_tokens": 34,
+      "metadata": {
+        "model_family": "direct",
+        "request_type": "direct_provider"
+      }
     }
   ],
-  "last_updated": "2026-06-03T16:02:06.193791"
+  "last_updated": "2026-06-03T17:23:09.111595"
 }

@@ -165,6 +165,36 @@ async def chat_completion(request: Request, chat_request: ChatCompletionRequest)
         ACTIVE_REQUESTS -= 1
         ACTIVE_REQUESTS_METRIC.dec()
 
+# src/api/main.py - Add this endpoint
+
+@app.get("/providers")
+async def list_providers():
+    """List all available providers and their status"""
+    providers_status = []
+    
+    # Check each provider
+    provider_list = ['openai', 'groq', 'together', 'ollama']
+    
+    for provider_name in provider_list:
+        try:
+            # Try to get the provider
+            provider = await router._get_provider(provider_name)
+            status = "available" if provider else "unavailable"
+        except Exception as e:
+            status = f"error: {str(e)}"
+        
+        providers_status.append({
+            "name": provider_name,
+            "status": status,
+            "enabled": router._provider_configs.get(provider_name, {}).get('enabled', True)
+        })
+    
+    return {
+        "providers": providers_status,
+        "configured_providers": list(router._provider_configs.keys()),
+        "loaded_instances": list(router._provider_instances.keys())
+    }
+
 @app.get("/metrics")
 async def metrics_endpoint():
     """Prometheus metrics endpoint"""

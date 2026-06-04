@@ -1,4 +1,4 @@
-# config/config.yaml
+# config/config.yaml - Complete configuration with Ollama and Hugging Face support
 server:
   host: "0.0.0.0"
   port: 8000
@@ -6,8 +6,11 @@ server:
 budget:
   daily_limit: 5.0
   hourly_limit: 1.0
+  alert_threshold: 0.8
 
+# Model chains - define routing strategies
 models:
+  # Fast, cheap cloud models (default)
   default:
     primary:
       provider: groq
@@ -16,6 +19,7 @@ models:
       - provider: openai
         model: gpt-3.5-turbo
   
+  # Premium quality cloud models
   premium:
     primary:
       provider: groq
@@ -28,6 +32,7 @@ models:
       - provider: openai
         model: gpt-3.5-turbo
   
+  # Balanced performance and cost
   balanced:
     primary:
       provider: groq
@@ -37,16 +42,239 @@ models:
         model: gpt-4o-mini
       - provider: groq
         model: llama-3.1-8b-instant
+  
+  # Local-only models (completely free, private)
+  local-only:
+    primary:
+      provider: ollama
+      model: llama3.2:3b
+    fallbacks:
+      - provider: ollama
+        model: qwen2.5:7b
+  
+  # Local priority (local first, then cloud)
+  local-priority:
+    primary:
+      provider: ollama
+      model: qwen2.5:7b
+    fallbacks:
+      - provider: ollama
+        model: llama3.2:3b
+      - provider: groq
+        model: llama-3.1-8b-instant
+      - provider: openai
+        model: gpt-3.5-turbo
+  
+  # Cost-optimized (free first, then cheap cloud)
+  cost-optimized:
+    primary:
+      provider: ollama
+      model: llama3.2:3b
+    fallbacks:
+      - provider: ollama
+        model: qwen2.5:7b
+      - provider: huggingface
+        model: mistralai/Mistral-7B-Instruct-v0.3
+      - provider: groq
+        model: llama-3.1-8b-instant
+      - provider: openai
+        model: gpt-3.5-turbo
+  
+  # NEW: Free cloud providers (rate-limited but free)
+  free-cloud:
+    primary:
+      provider: huggingface
+      model: mistralai/Mistral-7B-Instruct-v0.3
+    fallbacks:
+      - provider: huggingface
+        model: meta-llama/Llama-3.2-3B-Instruct
+      - provider: huggingface
+        model: google/gemma-2-2b-it
+      - provider: ollama
+        model: llama3.2:3b
+  
+  # NEW: Hugging Face specialized (best open-source models)
+  huggingface-specialized:
+    primary:
+      provider: huggingface
+      model: meta-llama/Llama-3.2-3B-Instruct
+    fallbacks:
+      - provider: huggingface
+        model: mistralai/Mistral-7B-Instruct-v0.3
+      - provider: huggingface
+        model: google/gemma-2-2b-it
+      - provider: groq
+        model: llama-3.1-8b-instant
+  
+  # Privacy-focused (all local, no cloud)
+  privacy:
+    primary:
+      provider: ollama
+      model: qwen2.5:7b
+    fallbacks:
+      - provider: ollama
+        model: llama3.2:3b
+  
+  # NEW: Hybrid free + paid (intelligent routing)
+  hybrid:
+    primary:
+      provider: groq
+      model: llama-3.1-8b-instant
+    fallbacks:
+      - provider: together
+        model: meta-llama/Llama-3-8b-chat-hf
+      - provider: huggingface
+        model: mistralai/Mistral-7B-Instruct-v0.3
+      - provider: ollama
+        model: llama3.2:3b
+      - provider: openai
+        model: gpt-3.5-turbo
 
+# Provider configurations
 providers:
+  # Cloud providers (paid, high performance)
   groq:
     timeout: 30
-    # enabled field removed - handled by router logic
+    api_key: ${GROQ_API_KEY}
+    enabled: true
+    description: "Fastest cloud inference"
+    priority: 1
+    cost_per_1k_tokens: 0.0001
   
   openai:
     timeout: 30
-    # enabled field removed
+    api_key: ${OPENAI_API_KEY}
+    enabled: true
+    description: "Most capable models"
+    priority: 2
+    cost_per_1k_tokens: 0.0015
   
   together:
     timeout: 30
-    enabled: false  # Keep this one as it's disabled
+    api_key: ${TOGETHER_API_KEY}
+    enabled: false
+    description: "Open source models hosting"
+    priority: 3
+    cost_per_1k_tokens: 0.0003
+  
+  # NEW: Hugging Face (free tier, rate-limited)
+  huggingface:
+    enabled: true
+    timeout: 90
+    description: "Free inference API - rate limited"
+    priority: 4
+    cost_per_1k_tokens: 0.0  # Free!
+    # Available models on Hugging Face free tier
+    models:
+      - mistralai/Mistral-7B-Instruct-v0.3      # 7B params, good performance
+      - meta-llama/Llama-3.2-3B-Instruct        # 3B params, fast
+      - google/gemma-2-2b-it                    # 2B params, very fast
+      - microsoft/phi-2                         # 2.7B params, efficient
+      - HuggingFaceH4/zephyr-7b-beta            # 7B params, conversational
+    # Model characteristics for smart routing
+    model_info:
+      mistralai/Mistral-7B-Instruct-v0.3:
+        speed: "moderate"
+        quality: "excellent"
+        use_case: "complex reasoning, coding, analysis"
+      meta-llama/Llama-3.2-3B-Instruct:
+        speed: "fast"
+        quality: "good"
+        use_case: "general chat, simple tasks"
+      google/gemma-2-2b-it:
+        speed: "very fast"
+        quality: "fair"
+        use_case: "high volume, simple queries"
+      microsoft/phi-2:
+        speed: "very fast"
+        quality: "good"
+        use_case: "reasoning, math, code"
+      HuggingFaceH4/zephyr-7b-beta:
+        speed: "moderate"
+        quality: "excellent"
+        use_case: "conversational AI, chat"
+  
+  # Local provider - Ollama (free, private)
+  ollama:
+    enabled: true
+    base_url: http://localhost:11434
+    timeout: 120
+    description: "Local models - free, private inference"
+    priority: 5
+    cost_per_1k_tokens: 0.0  # Free!
+    # Available models on your machine
+    models:
+      - llama3.2:3b      # Small, fast (~2GB)
+      - qwen2.5:7b       # Larger, more capable (~4GB)
+    # Model characteristics for smart routing
+    model_info:
+      llama3.2:3b:
+        speed: "fast"
+        quality: "good"
+        memory_gb: 2
+        use_case: "simple tasks, chat, high volume"
+      qwen2.5:7b:
+        speed: "moderate"
+        quality: "very good"
+        memory_gb: 4
+        use_case: "complex reasoning, coding, analysis"
+
+# Performance settings
+performance:
+  max_concurrent_requests: 50
+  request_queue_size: 100
+  connection_pool_size: 20
+  cleanup_interval: 60
+  
+# Resilience settings
+resilience:
+  circuit_breaker:
+    failure_threshold: 3
+    recovery_timeout: 30
+    success_threshold: 2
+  
+  retry:
+    max_attempts: 3
+    base_delay: 1.0
+    max_delay: 10.0
+    backoff_multiplier: 2.0
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "json"
+  output: "logs/llm-gateway.log"
+  max_size_mb: 100
+  backup_count: 5
+
+# Monitoring configuration
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+  grafana:
+    enabled: true
+    url: "http://localhost:3000"
+
+# Smart routing rules (automatic provider selection)
+routing_rules:
+  # Privacy-sensitive data -> use local only
+  - condition: "privacy_sensitive"
+    model_family: "privacy"
+    
+  # Cost-critical applications -> use free tiers first
+  - condition: "cost_critical"
+    model_family: "cost-optimized"
+    
+  # Speed-critical -> use fastest providers
+  - condition: "speed_critical"
+    model_family: "performance"
+    
+  # High volume -> use free cloud + local hybrid
+  - condition: "high_volume"
+    model_family: "free-cloud"
+    
+  # Complex reasoning -> use best quality models
+  - condition: "complex_reasoning"
+    model_family: "premium"
